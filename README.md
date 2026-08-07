@@ -1,69 +1,108 @@
 # Washer-Sense: Smart IoT Upgrade for Any Washer
-
-**Published:** July 20, 2026 by YonderLabo  
-**Difficulty:** Beginner (3 hours 15 mins)
+**By YonderLabo**
 
 Stop forgetting your laundry! Stick this M5Stack device on your washer to track IMU vibrations and get instant Discord notifications.
+
+![Cover Image](https://hackster.imgix.net/uploads/attachments/1977670/_xZnOed4YYG.blob?auto=compress%2Cformat&w=900&h=675&fit=min)
 
 ## Things used in this project
 
 ### Hardware components
-* M5Stack M5StickC PLUS ESP32-PICO Mini IoT Development Kit × 1
+* **M5Stack M5StickC PLUS ESP32-PICO Mini IoT Development Kit** x 1
 
 ### Software apps and online services
-* M5Stack UIFlow 2.0
-
----
+* **M5Stack UIFlow 2.0**
 
 ## Story
 
 ### Washer-Sense: A Smart, Non-Intrusive IoT Laundry Monitor
 
-#### The Inspiration: Why I Built This
-* *"Is the laundry done yet?"* — Wasting time constantly walking back and forth to the laundry room to check.
-* *"I forgot to hang the clothes!"* — Leaving wet clothes in the machine for hours, leading to a damp smell and forcing a re-wash.
+### The Inspiration: Why I Built This
+![Inspiration](https://hackster.imgix.net/uploads/attachments/1977732/image_SG38jFxgH2.png?auto=compress%2Cformat&w=740&h=555&fit=max)
+
+* **"Is the laundry done yet?"** — Wasting time constantly walking back and forth to the laundry room to check.
+* **"I forgot to hang the clothes!"** — Leaving wet clothes in the machine for hours, leading to a damp smell and forcing a re-wash.
 
 These everyday frustrations are what initially inspired this project. To solve them, I wanted a straightforward, non-intrusive solution that notifies me the exact moment the laundry cycle finishes.
 
-#### Designing for Accessibility
+### Designing for Accessibility
 Furthermore, there is another crucial motivation behind this project.
+
 I have been involved in developing IoT devices for the hearing impaired. Most household appliances rely on auditory cues (like a loud beep) to signal completion. This design is not accessible, and I have heard many complaints from the deaf and hard-of-hearing community.
 
 I wanted to create a mechanism that not only eliminates inconvenience for the general public but also provides a simple, visual, and reliable smartphone alert system to assist those with hearing loss in their daily lives.
 
-#### The Solution: Washer-Sense
-*Washer-Sense* is a retrofitted, low-cost IoT add-on.
-By simply attaching an *M5StickC Plus2* to the exterior of your washing machine, it detects physical vibrations and sends a real-time notification to your smartphone via Discord when the cycle completes.
+### The Solution: Washer-Sense
+**Washer-Sense** is a retrofitted, low-cost IoT add-on.
+
+By simply attaching an **M5StickC Plus2** to the exterior of your washing machine, it detects physical vibrations and sends a real-time notification to your smartphone via Discord when the cycle completes.
+
 * **Zero-Invasive:** No tools, wiring modifications, or disassembly required.
 * **Easy Setup:** Just stick it on and power it up.
 
-#### What Makes This Project Special
-While there are many DIY laundry monitors, *Washer-Sense* stands out due to its practical, real-world design focus:
+### What Makes This Project Special
+While there are many DIY laundry monitors, **Washer-Sense** stands out due to its practical, real-world design focus:
+
 * **Zero-Invasive Retrofitting:** Unlike projects that splice into high-voltage appliance wiring or hack into control boards, Washer-Sense sits entirely on the outside. It is 100% safe, requires no electrical knowledge, and is completely renter-friendly.
 * **Smart Auto-Calibration:** Most vibration sensors fail because different washing machines have different spin cycles and baseline vibrations. Instead of hardcoding thresholds in the code, Washer-Sense calibrates itself to *your* specific machine at the press of a button.
 * **Lightweight & Modular Architecture:** By pairing a micro-controller (M5Stick) with a cloud integrator (Make.com), the system remains incredibly lightweight. You can easily swap Discord for Slack, Telegram, or SMS without rewriting a single line of device firmware.
 
-#### How It Works
+### How It Works
 The entire workflow is split into three simple, lightweight steps:
+
+```text
+[M5StickC Plus2] (Vibration Detection)
+       │
+       ▼ (HTTP GET Webhook)
+  [Make.com] (Cloud Integration)
+       │
+       ▼ (Discord API)
+   [Discord] (Push Notification to Phone)
+```
+
+![Make.com](https://hackster.imgix.net/uploads/attachments/1977719/image_GsXX3Qxea6.png?auto=compress%2Cformat&w=740&h=555&fit=max)
 
 1. **The Sensor Device (M5StickC Plus2):** Continuously monitors vibration data using its built-in IMU (Inertial Measurement Unit). When a state change is detected, it triggers an HTTP GET request to a Make.com webhook.
 2. **Cloud Integration (Make.com):** Receives the webhook, parses the machine's current status, and forwards the message to Discord using the Discord API.
 3. **Instant Notification (Discord):** Pushes a direct alert (e.g., ✅ Washer-Sense: Washing Finished!) straight to your smartphone or smartwatch.
 
+[![Washer-Sense Demo 1](https://img.youtube.com/vi/SPICMqdA58A/0.jpg)](https://www.youtube.com/watch?v=SPICMqdA58A)
+
+[![Washer-Sense Demo 2](https://img.youtube.com/vi/nhzGt5PcGV8/0.jpg)](https://www.youtube.com/watch?v=nhzGt5PcGV8)
+
 ### State Machine Logic
 To prevent false alarms and ensure accuracy, the device dynamically tracks the washing machine's cycle through five distinct states based on the duration of physical vibrations:
 
+```text
+┌───────┐      Vibration      ┌──────────┐ > 5s Vib.  ┌─────────┐
+  │       ├────────────────────>│          ├───────────>│ WASHING │
+  │       │                     │ CHECKING │            └────┬────┘
+  │ IDLE  │<────────────────────┤          │                 │
+  │       │     No Vibration    └──────────┘                 │ No Vib.
+  └▲──────┘                                                  ▼
+   │                                                    ┌─────────┐
+   │                                                    │ PAUSED  │
+   │                                                    └────┬────┘
+   │                                                         │ Silent for 10s
+   │                    (After 3 seconds)                    ▼
+   └────────────────────────────────────────────────────┌──────────┐
+                                                        │ FINISHED │
+                                                        └──────────┘
+```
+
 * **IDLE:** The machine is completely at rest.
 * **CHECKING:** Initial vibration is detected. If the vibration stops before reaching 5 seconds, the system treats it as a transient disturbance (false alarm) and returns directly to IDLE.
-* **WASHING:** If vibration continues consistently for *5 seconds* , the system confirms the washing cycle has officially started.
+* **WASHING:** If vibration continues consistently for **5 seconds**, the system confirms the washing cycle has officially started.
 * **PAUSED:** If vibration temporarily stops (e.g., during water fill or drain cycles), it enters a paused state to prevent premature finish alerts.
-* **FINISHED!:** If the machine remains completely silent in the paused state for *10 seconds* , it triggers the final Discord notification. After 3 seconds, it automatically resets back to IDLE for the next load.
+* **FINISHED!:** If the machine remains completely silent in the paused state for **10 seconds**, it triggers the final Discord notification. After 3 seconds, it automatically resets back to IDLE for the next load.
+
+![State Machine Logic](https://hackster.imgix.net/uploads/attachments/1977718/image_kuLdfxj1ev.png?auto=compress%2Cformat&w=740&h=555&fit=max)
 
 ### Smart Features for Easy Setup
 To make daily operation and debugging seamless, I utilized the device's physical buttons:
 
 #### 1. One-Touch Calibration (Button A)
-* **How it works:** Pressing Button A samples the machine's orientation and ambient environment for *3 seconds*.
+* **How it works:** Pressing Button A samples the machine's orientation and ambient environment for **3 seconds**.
 * **Why it's useful:** Automatically calibrates and sets the optimal vibration threshold, ensuring it works perfectly on any washing machine model regardless of background noise.
 
 #### 2. Live Test Mode (Button B)
@@ -71,11 +110,9 @@ To make daily operation and debugging seamless, I utilized the device's physical
   * **Normal Mode:** Only notifies you on cycle start and completion (ideal for daily use).
   * **Test Mode:** Sends a Discord notification on *every* state change (ideal for debugging and adjusting the sensor's position).
 
----
-
 ## Code
 
-### Washer-Sense: Retrofit Smart Laundry IoT Sensor
+### Washer-Sense: Retrofit Smart Laundry IoT Sensor (Python)
 
 ```python
 import os, sys, io
@@ -100,8 +137,8 @@ MAKE_WEBHOOK_URL = "YOUR_MAKE_WEBHOOK_URL"
 # ==========================================
 # Notify mode (0: Start & Finish only, 1: Test mode - all state changes)
 NOTIFY_MODE = 0
-TIME_TO_WASHING = 5.0 # Seconds of continuous vibration to determine "WASHING"
-TIME_TO_FINISHED = 10.0 # Seconds of complete silence to determine "FINISHED!"
+TIME_TO_WASHING = 5.0    # Seconds of continuous vibration to determine "WASHING"
+TIME_TO_FINISHED = 10.0  # Seconds of complete silence to determine "FINISHED!"
 
 # ==========================================
 # Global Variables
@@ -113,7 +150,7 @@ lbl_th = None
 lbl_wifi = None
 
 # Graph buffer (for 120 points)
-graph_data = [ 0 ] * 120
+graph_data = [0] * 120
 
 # Vibration and State management
 V_THRESHOLD = 0.5
@@ -146,16 +183,16 @@ def setup():
     wlan.active(True)
     if not wlan.isconnected():
         wlan.connect(WIFI_SSID, WIFI_PASS)
-    while not wlan.isconnected():
-        time.sleep(1)
-
+        while not wlan.isconnected():
+            time.sleep(1)
+            
     wifi_state_prev = True
     lbl_wifi.setText("WiFi: OK")
     lbl_wifi.setColor(0x00FF00, 0x000000)
-
+            
     current_machine_state = "IDLE"
     restore_state_label()
-
+    
     if NOTIFY_MODE == 1:
         send_to_make("🔵 Washer-Sense: Booted", "BOOT")
 
@@ -174,12 +211,12 @@ def setup():
 
 def draw_graph():
     M5.Lcd.fillRect(0, 170, 160, 70, 0x000000)
-
+    
     # Scale Y-axis based on the threshold
     graph_max = V_THRESHOLD * 2.0
     if graph_max <= 0.01:
         graph_max = 0.05
-
+        
     for i in range(1, len(graph_data)):
         x1 = i - 1
         y1 = 240 - int((graph_data[i - 1] / graph_max) * 70)
@@ -191,7 +228,7 @@ def draw_graph():
         y2 = max(170, min(240, y2))
 
         M5.Lcd.drawLine(x1, y1, x2, y2, 0x00FF00)
-
+        
     # Draw threshold line (Red)
     th_y = 240 - int((V_THRESHOLD / graph_max) * 70)
     th_y = max(170, min(240, th_y))
@@ -210,22 +247,22 @@ def do_calibration():
     global V_THRESHOLD, lbl_state, lbl_th
     global base_x, base_y, base_z
     global current_machine_state
-
+    
     lbl_state.setColor(0xFFFF00, 0x000000)
-
+    
     # 3-second countdown (Wait for vibrations to settle)
     for i in range(3, 0, -1):
         lbl_state.setText(f"Wait {i}s")
         time.sleep(1)
-
+        
     lbl_state.setColor(0x00FFFF, 0x000000)
-
+    
     # 3-second measurement for posture and noise (Total 150 samples)
     sum_x = sum_y = sum_z = 0.0
     sum_noise = 0.0
     valid_samples = 0
     samples_per_sec = 50
-
+    
     for sec in range(1, 4):
         lbl_state.setText(f"Meas {sec}/3s")
         for _ in range(samples_per_sec):
@@ -235,36 +272,36 @@ def do_calibration():
                 sum_x += accel[0]
                 sum_y += accel[1]
                 sum_z += accel[2]
-
+                
                 # Temporary noise calculation (Using previous baseline)
                 dx = accel[0] - base_x
                 dy = accel[1] - base_y
                 dz = accel[2] - base_z
-                vibe = math.sqrt(dx * dx + dy * dy + dz * dz) * 10.0
+                vibe = math.sqrt(dx*dx + dy*dy + dz*dz) * 10.0
                 sum_noise += vibe
                 valid_samples += 1
             except:
                 pass
             time.sleep_ms(20)
-
+            
     # After measurement, set new posture baseline and set threshold to 2x noise
     if valid_samples > 0:
         base_x = sum_x / valid_samples
         base_y = sum_y / valid_samples
         base_z = sum_z / valid_samples
-
+        
         avg_noise = sum_noise / valid_samples
         V_THRESHOLD = avg_noise * 2.0
-
-        # Safety minimum threshold
-        if V_THRESHOLD < 0.15:
-            V_THRESHOLD = 0.15
-
+        
+    # Safety minimum threshold
+    if V_THRESHOLD < 0.15:
+        V_THRESHOLD = 0.15
+        
     lbl_th.setText(f"Th: {V_THRESHOLD:.3f}")
     lbl_state.setText("Calib Done!")
     lbl_state.setColor(0x00FF00, 0x000000)
     time.sleep(1.5)
-
+    
     # Force back to IDLE after calibration
     current_machine_state = "IDLE"
     restore_state_label()
@@ -286,7 +323,7 @@ def send_to_make(msg_text, status_text):
         request_url = f"{MAKE_WEBHOOK_URL}?msg={safe_msg}&status={safe_status}"
         response = requests.get(request_url)
         response.close()
-        return True
+        return True 
     except Exception as e:
         print(f"Make Error: {e}")
         return False
@@ -300,25 +337,25 @@ def loop():
 
     M5.update()
     current_time = time.ticks_ms()
-
+    
     # Button A: Trigger calibration
     if M5.BtnA.wasPressed():
         do_calibration()
         last_time = time.ticks_ms()
         return
-
+        
     # Button B: Toggle notify mode
     if M5.BtnB.wasPressed():
         NOTIFY_MODE = 1 if NOTIFY_MODE == 0 else 0
         lbl_state.setColor(0x00FFFF, 0x000000)
-
+        
         if NOTIFY_MODE == 1:
             lbl_state.setText("MODE: TEST")
             send_to_make("🛠️ Washer-Sense: TEST MODE ON", "MODE")
         else:
             lbl_state.setText("MODE: NORMAL")
             send_to_make("🛠️ Washer-Sense: NORMAL MODE ON", "MODE")
-
+        
         time.sleep(1.5)
         restore_state_label()
         last_time = time.ticks_ms()
@@ -347,16 +384,31 @@ def loop():
                 dx = accel[0] - base_x
                 dy = accel[1] - base_y
                 dz = accel[2] - base_z
-                v = math.sqrt(dx * dx + dy * dy + dz * dz)
+                v = math.sqrt(dx*dx + dy*dy + dz*dz)
                 if v > peak_vibe: peak_vibe = v
                 time.sleep_ms(5)
-
+                
             vibe = peak_vibe * 10.0
             lbl_v.setText(f"{vibe:.3f}")
 
             is_vibration = vibe > V_THRESHOLD
             now = time.ticks_ms()
             previous_state = current_machine_state
+            
+            # ==========================================
+            # State Machine Flow Diagram
+            # ==========================================
+            #   ┌────────┐    Vibration     ┌──────────┐  > 5s Vib.   ┌─────────┐
+            #   │  IDLE  ├─────────────────>│ CHECKING ├─────────────>│ WASHING │
+            #   └─▲──▲───┘                  └────┬─────┘              └────┬────┘
+            #     │  │                           │                         │ No Vib.
+            #     │  │       No Vib. (>3s)       │                         ▼
+            #     │  └───────────────────────────┘                    ┌─────────┐
+            #     │                                 Silent for 10s    │ PAUSED  │
+            #     │                             ┌──────────┐          │         │
+            #     └──────(After 3 seconds)──────┤ FINISHED │<─────────┤         │
+            #                                   └──────────┘          └─────────┘
+            # ==========================================
 
             # --- State Machine Logic ---
             if is_vibration:
@@ -378,7 +430,7 @@ def loop():
                 if not is_vibration and time.ticks_diff(now, last_vibe_time) > 2000:
                     current_machine_state = "PAUSED"
                     restore_state_label()
-
+                    
             elif current_machine_state == "PAUSED":
                 if is_vibration:
                     current_machine_state = "WASHING"
@@ -386,20 +438,20 @@ def loop():
                 elif time.ticks_diff(now, last_vibe_time) >= TIME_TO_FINISHED * 1000:
                     current_machine_state = "FINISHED!"
                     restore_state_label()
-
+            
             elif current_machine_state == "FINISHED!":
                 # Reset to IDLE 3 seconds after becoming FINISHED!
                 if time.ticks_diff(now, last_vibe_time) >= (TIME_TO_FINISHED + 3.0) * 1000:
                     current_machine_state = "IDLE"
                     restore_state_label()
-
+            
             if current_machine_state != previous_state:
                 if NOTIFY_MODE == 1:
                     if current_machine_state == "FINISHED!":
                         send_to_make("✅ Washer-Sense: Washing Finished!", current_machine_state)
                     else:
                         send_to_make(f"🔄 State Changed: {current_machine_state}", current_machine_state)
-
+                    
                 elif NOTIFY_MODE == 0:
                     if current_machine_state == "FINISHED!":
                         send_to_make("✅ Washer-Sense: Washing Finished!", current_machine_state)
@@ -420,3 +472,4 @@ if __name__ == '__main__':
             loop()
     except Exception as e:
         sys.print_exception(e)
+```
